@@ -103,7 +103,7 @@ python train_phoneme_split.py --dataset GRID --grid_root ./GRID_processed/ --sav
 For cluster runs, two sbatch scripts are provided (`mkdir -p logs` before submitting, so SLURM can open the job logs; adjust `--partition` and resources to your cluster). They use **pyenv** — set `PYENV_VERSION` to the env with the required packages (default `3.11.5`):
 
 ```bash
-# 1. Preprocessing (CPU job) — raw GRID root defaults to the mounted av-data disk
+# 1. Preprocessing — runs on a GPU node (NVIDIA drivers provide libEGL.so.1 for mediapipe)
 mkdir -p logs && sbatch scripts/slurm/preprocess_grid.sbatch
 
 # 2. Training (GPU job) — submit after the preprocessing job finishes
@@ -111,6 +111,13 @@ mkdir -p logs && sbatch scripts/slurm/train_grid.sbatch --export=SAVE_NAME=grid_
 ```
 
 Defaults are wired to the mounted data disk (`/mnt/lustre/ifm-lustre-prod-us-west1-a/av-data/`): `RAW_DIR=.../grid-data`, `OUT_DIR`/`GRID_ROOT=.../GRID_processed`. Both scripts also accept `PYENV_VERSION`, `PYENV_ROOT`, and `REPO_DIR` (defaults to the submit directory), and write stdout/stderr to `logs/`. To chain them automatically, submit training with `--dependency=afterok:<preprocess_job_id>`.
+
+**Headless GL dependency:** mediapipe's native library needs `libEGL.so.1`, which headless CPU nodes don't have. Either run preprocessing on a GPU node (NVIDIA drivers usually provide it), or extract user-space GL libs into your home dir — `preprocess_grid.sbatch` picks them up automatically:
+
+```bash
+mkdir -p ~/gl-libs && cd ~/gl-libs
+apt-get download libegl1 libglvnd0 && for f in *.deb; do dpkg -x "$f" ~/gl-libs; done
+```
 
 | Argument | Default | Description |
 |----------|---------|-------------|

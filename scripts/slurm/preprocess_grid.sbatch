@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=vfa-preproc
-#SBATCH --partition=cpu              # CPU-only: mediapipe lip cropping
+#SBATCH --partition=a3m              # GPU nodes: NVIDIA drivers provide libEGL.so.1, which mediapipe needs
+#SBATCH --gres=a3m:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
@@ -21,6 +22,13 @@ PYENV_VERSION="${PYENV_VERSION:-3.14.8}"   # pyenv version with mediapipe, openc
 
 cd "$REPO_DIR"
 mkdir -p logs
+
+# mediapipe's native lib needs libEGL.so.1, absent on headless CPU nodes.
+# If extracted user-space GL libs exist (see README), put them on the path.
+if [ -d "${GL_LIBS_DIR:-$HOME/gl-libs/usr/lib/x86_64-linux-gnu}" ]; then
+    export LD_LIBRARY_PATH="${GL_LIBS_DIR:-$HOME/gl-libs/usr/lib/x86_64-linux-gnu}:$LD_LIBRARY_PATH"
+    echo "Using user-space GL libs from $LD_LIBRARY_PATH"
+fi
 
 # Use the pyenv interpreter directly (no shims/init needed in a batch shell)
 PYTHON="$PYENV_ROOT/versions/$PYENV_VERSION/bin/python"

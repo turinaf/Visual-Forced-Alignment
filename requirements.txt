@@ -1,0 +1,13 @@
+# Core training
+torch
+numpy
+editdistance
+einops
+
+# Data loading / video
+opencv-python
+torchaudio  # imported by the LRS2 dataset
+
+# GRID preprocessing (scripts/preprocess_grid.py only)
+mediapipe
+tqdm

@@ -1,0 +1,41 @@
+#!/bin/bash
+#SBATCH --job-name=vfa-preproc
+#SBATCH --partition=cpu              # CPU-only: mediapipe lip cropping
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
+#SBATCH --time=24:00:00
+#SBATCH --output=logs/preprocess_grid_%j.out
+#SBATCH --error=logs/preprocess_grid_%j.err
+
+# Submit with overrides, e.g.:
+#   mkdir -p logs && sbatch scripts/slurm/preprocess_grid.sbatch
+# (mkdir first so slurm can open the job log)
+
+set -euo pipefail
+
+REPO_DIR="${REPO_DIR:-$SLURM_SUBMIT_DIR}"
+RAW_DIR="${RAW_DIR:-/mnt/lustre/ifm-lustre-prod-us-west1-a/av-data/grid-data}"
+OUT_DIR="${OUT_DIR:-/mnt/lustre/ifm-lustre-prod-us-west1-a/av-data/GRID_processed}"
+PYENV_ROOT="${PYENV_ROOT:-$HOME/.pyenv}"
+PYENV_VERSION="${PYENV_VERSION:-3.14.8}"   # pyenv version with mediapipe, opencv-python, tqdm
+
+cd "$REPO_DIR"
+mkdir -p logs
+
+# Use the pyenv interpreter directly (no shims/init needed in a batch shell)
+PYTHON="$PYENV_ROOT/versions/$PYENV_VERSION/bin/python"
+if [ ! -x "$PYTHON" ]; then
+    echo "Error: python not found at $PYTHON" >&2
+    echo "Set PYENV_VERSION (or PYENV_ROOT) to a version with mediapipe installed." >&2
+    exit 1
+fi
+
+echo "Job: $SLURM_JOB_ID  Node: $(hostname)"
+echo "Repo: $REPO_DIR  Raw: $RAW_DIR  Out: $OUT_DIR"
+echo "Python: $($PYTHON --version 2>&1) ($PYTHON)"
+
+"$PYTHON" scripts/preprocess_grid.py \
+    --raw_dir "$RAW_DIR" \
+    --out_dir "$OUT_DIR"
+
+echo "Preprocessing done."

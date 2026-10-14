@@ -98,6 +98,20 @@ To train on GRID instead (after preprocessing, see above):
 python train_phoneme_split.py --dataset GRID --grid_root ./GRID_processed/ --save_name grid_experiment
 ```
 
+### SLURM
+
+For cluster runs, two sbatch scripts are provided (`mkdir -p logs` before submitting, so SLURM can open the job logs; adjust `--partition` and resources to your cluster). They use **pyenv** — set `PYENV_VERSION` to the env with the required packages (default `3.11.5`):
+
+```bash
+# 1. Preprocessing (CPU job) — raw GRID root defaults to the mounted av-data disk
+mkdir -p logs && sbatch scripts/slurm/preprocess_grid.sbatch
+
+# 2. Training (GPU job) — submit after the preprocessing job finishes
+mkdir -p logs && sbatch scripts/slurm/train_grid.sbatch --export=SAVE_NAME=grid_v1
+```
+
+Defaults are wired to the mounted data disk (`/mnt/lustre/ifm-lustre-prod-us-west1-a/av-data/`): `RAW_DIR=.../grid-data`, `OUT_DIR`/`GRID_ROOT=.../GRID_processed`. Both scripts also accept `PYENV_VERSION`, `PYENV_ROOT`, and `REPO_DIR` (defaults to the submit directory), and write stdout/stderr to `logs/`. To chain them automatically, submit training with `--dependency=afterok:<preprocess_job_id>`.
+
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--gpu` | `2` | GPU id to use |
@@ -105,9 +119,11 @@ python train_phoneme_split.py --dataset GRID --grid_root ./GRID_processed/ --sav
 | `--epoch_num` | `60` | Number of training epochs |
 | `--save_epochs` | `3` | Interval (epochs) for test evaluation / logging |
 | `--load_name` | `None` | Checkpoint name to resume from |
-| `--save_name` | `test` | Experiment name; checkpoints saved to `./checkpoints/VFA/<save_name>/` |
+| `--save_name` | `test` | Experiment name; checkpoints saved to `data.consts.pkl_root` / `<save_name>/` |
 
-Training uses the **Noam** learning-rate schedule (8 warm-up epochs) plus `ReduceLROnPlateau`, and logs frame accuracy, phoneme CER, and boundary accuracy to `./checkpoints/VFA/<save_name>/`. Every `--save_epochs` epochs it evaluates on the test split (frame CER/accuracy, phoneme CER, boundary accuracy).
+Training uses the **Noam** learning-rate schedule (8 warm-up epochs) plus `ReduceLROnPlateau`, and logs frame accuracy, phoneme CER, and boundary accuracy. Every `--save_epochs` epochs it evaluates on the test split (frame CER/accuracy, phoneme CER, boundary accuracy).
+
+Checkpoints default to the mounted lustre disk (`/mnt/lustre/ifm-lustre-prod-us-west1-a/av-data/checkpoints/VFA/`, set in `data/consts.py`); override with the `VFA_CHECKPOINT_ROOT` env var.
 
 ### Alignment (inference)
 
@@ -131,7 +147,8 @@ The DP enforces that the label sequence is consumed in order (each label occupie
 ├── train_phoneme_split.py       # training entry point
 ├── scripts/
 │   ├── preprocess_grid.py       # GRID preprocessing (mediapipe lip cropping + splits)
-│   └── viterbi_align.py         # Viterbi frame-to-phoneme alignment
+│   ├── viterbi_align.py         # Viterbi frame-to-phoneme alignment
+│   └── slurm/                   # sbatch scripts (preprocess_grid, train_grid)
 ├── models/
 │   ├── phoneme_split_net.py     # main model (front-end + Conformer + decoders)
 │   ├── conformer_xattn.py       # Conformer encoder with cross-attention

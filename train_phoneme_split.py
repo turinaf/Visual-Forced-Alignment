@@ -25,6 +25,7 @@ def arg_parse():
     parser.add_argument('--save_name', help='saved pkl file name', default='test')
     parser.add_argument('--dataset', choices=['LRS2', 'GRID'], default='LRS2', help='dataset to train on')
     parser.add_argument('--grid_root', default='./GRID_processed/', help='root of preprocessed GRID data (from scripts/preprocess_grid.py)')
+    parser.add_argument('--num_workers', type=int, default=3, help='dataloader workers per process')
     return parser.parse_args()
 
 
@@ -93,9 +94,9 @@ def main():
     if not os.path.exists(consts.pkl_root):
         os.makedirs(consts.pkl_root)
 
-    train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=3,
+    train_data_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
                                    pin_memory=True, collate_fn=collate_fn)
-    unseen_data_loader = DataLoader(unseen_dataset, batch_size=args.batch_size, shuffle=False, num_workers=3,
+    unseen_data_loader = DataLoader(unseen_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
                                     pin_memory=True, collate_fn=collate_fn)
 
     total_time = 0

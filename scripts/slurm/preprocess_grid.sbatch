@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=vfa-preproc
 #SBATCH --partition=a3m              # GPU nodes: NVIDIA drivers provide libEGL.so.1, which mediapipe needs
-#SBATCH --gres=a3m:1
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00

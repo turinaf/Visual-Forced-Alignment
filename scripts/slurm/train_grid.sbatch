@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=vfa-train
 #SBATCH --partition=a3m
-#SBATCH --gres=a3m:1
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=24:00:00

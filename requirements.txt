@@ -5,7 +5,12 @@ editdistance
 einops
 
 # Data loading / video
-opencv-python
+# Use the *headless* opencv build: the standard wheels link libGL.so.1,
+# which is missing on headless cluster nodes. contrib is needed because
+# mediapipe depends on it, and headless provides the same cv2 module.
+# NOTE: if opencv-python or opencv-contrib-python is already installed,
+# uninstall it first — the builds conflict (both provide the cv2 module).
+opencv-contrib-python-headless
 torchaudio  # imported by the LRS2 dataset
 
 # GRID preprocessing (scripts/preprocess_grid.py only)

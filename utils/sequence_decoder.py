@@ -4,15 +4,21 @@ import torch.nn.functional as F
 from data import consts
 
 
-def greedy_decode(model, tgt_embed_ins, memory, max_len, **kwargs):
+def greedy_decode(model, tgt_embed_ins, memory, max_len, bos=None, eos=None, **kwargs):
     """
     :param model: Transformer
     :param tgt_embed_ins: target TokenEmbedding
     :param memory: (seq_len, 1, embed_size)
     :param max_len:
+    :param bos: begin-of-sequence token id (defaults to consts.BOS)
+    :param eos: end-of-sequence token id (defaults to consts.EOS)
     :return: (n, 1)
     """
-    ys = torch.full((1, 1), consts.BOS).type(torch.long).cuda()
+    if bos is None:
+        bos = consts.BOS
+    if eos is None:
+        eos = consts.EOS
+    ys = torch.full((1, 1), bos).type(torch.long).cuda()
     for i in range(max_len - 1):
         memory = memory.cuda()
         tgt_mask = (generate_square_subsequent_mask(ys.size(0)).type(torch.bool)).cuda()
@@ -26,7 +32,7 @@ def greedy_decode(model, tgt_embed_ins, memory, max_len, **kwargs):
 
         next_word = torch.argmax(prob, -1).squeeze().item()
         ys = torch.cat([ys, torch.ones(1, 1).type(torch.long).fill_(next_word).cuda()], dim=0)
-        if next_word == consts.EOS:
+        if next_word == eos:
             break
     # print("greedy out size: " + str(ys.squeeze().shape))
     return ys.squeeze()

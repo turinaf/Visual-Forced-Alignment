@@ -63,6 +63,18 @@ video_frames: <num_frames>
 
 Data augmentation (`utils/data_augment_util.py`): random spatial cropping to 88×88, random horizontal flip, and temporal masking; center-cropping at test time.
 
+### GRID corpus
+
+The model can also be trained on the **GRID audio-visual corpus** (word-level labels instead of phonemes). GRID ships full-face `.mpg` videos plus `.align` transcript files (`start end word`, silence marked as `sil`), so it first needs preprocessing: MediaPipe Face Landmarker detects and crops the lip region per frame (`data/preprocessing.py`), producing 96×96 25 fps mouth videos.
+
+```
+# One-time preprocessing (requires mediapipe, opencv-python, tqdm):
+python scripts/preprocess_grid.py --raw_dir /path/to/grid_raw --out_dir ./GRID_processed
+# add --speaker_independent to hold out whole speakers for val/test
+```
+
+This writes `GRID_processed/<speaker>/video/<clip>.mp4`, `GRID_processed/<speaker>/align/<clip>.align`, and `{train,val,test}_split.json` (random 80/10/10 clip split, seed 42). The vocabulary is built automatically from the align files. Align times are 25 kHz audio samples, converted to frames exactly via `frame = t / 1000` (25 fps video); if a clip's actual frame count mismatches (e.g. preprocessing dropped frames), times are rescaled to the real frame count as a fallback.
+
 ## Usage
 
 ### Requirements
@@ -78,6 +90,12 @@ python train_phoneme_split.py \
     --epoch_num 60 \
     --save_epochs 3 \
     --save_name my_experiment
+```
+
+To train on GRID instead (after preprocessing, see above):
+
+```bash
+python train_phoneme_split.py --dataset GRID --grid_root ./GRID_processed/ --save_name grid_experiment
 ```
 
 | Argument | Default | Description |
@@ -111,14 +129,18 @@ The DP enforces that the label sequence is consumed in order (each label occupie
 
 ```
 ├── train_phoneme_split.py       # training entry point
-├── scripts/viterbi_align.py     # Viterbi frame-to-phoneme alignment
+├── scripts/
+│   ├── preprocess_grid.py       # GRID preprocessing (mediapipe lip cropping + splits)
+│   └── viterbi_align.py         # Viterbi frame-to-phoneme alignment
 ├── models/
 │   ├── phoneme_split_net.py     # main model (front-end + Conformer + decoders)
 │   ├── conformer_xattn.py       # Conformer encoder with cross-attention
 │   └── resnet_new.py            # ResNet-18 visual backbone
 ├── data/
 │   ├── consts.py                # constants (token ids, embed size, paths)
-│   └── LRS2_dataset.py          # LRS2 dataset + label loading + collate
+│   ├── preprocessing.py         # mediapipe lip-cropping helpers
+│   ├── LRS2_dataset.py          # LRS2 dataset + label loading + collate
+│   └── grid_dataset.py          # GRID dataset + word vocab + label loading
 └── utils/
     ├── sequence_decoder.py      # greedy autoregressive decoding
     ├── data_augment_util.py     # video augmentations

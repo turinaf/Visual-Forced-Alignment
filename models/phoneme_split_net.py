@@ -90,6 +90,10 @@ class PhonemeSplitDecoderNet(nn.Module):
         embed_dim = consts.EMBED_SIZE
         self.frontend = Visual_front(in_channels=1, out_channels=embed_dim)
         hidden_dim = consts.EMBED_SIZE
+        # BOS/EOS sit at the top of the label space (LRS2: 53/54 per consts;
+        # GRID derives them from its own vocabulary size).
+        self.bos = num_class - 2
+        self.eos = num_class - 1
 
         self.pad = 0
         self.ph_embed = nn.Embedding(num_class, embedding_dim=embed_dim, padding_idx=self.pad)
@@ -141,7 +145,7 @@ class PhonemeSplitDecoderNet(nn.Module):
         preds = []
         for i in range(B):
             memory = xy_concat[i].unsqueeze(1)
-            pred = greedy_decode(self, self.ph_w_sil_embed, memory, consts.TOKEN_MAX_LEN, linear=self.ph_linear, beam_width=8)
+            pred = greedy_decode(self, self.ph_w_sil_embed, memory, consts.TOKEN_MAX_LEN, linear=self.ph_linear, beam_width=8, bos=self.bos, eos=self.eos)
             preds.append(pred)
         bound_out = self.bound_linear(x).squeeze(-1)
         bound_out = F.sigmoid(bound_out)

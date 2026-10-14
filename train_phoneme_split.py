@@ -23,6 +23,8 @@ def arg_parse():
     parser.add_argument('--save_epochs', type=int, default=3, help='epoch interval to save checkpoint')
     parser.add_argument('--load_name', help='load pkl file name', default=None)
     parser.add_argument('--save_name', help='saved pkl file name', default='test')
+    parser.add_argument('--dataset', choices=['LRS2', 'GRID'], default='LRS2', help='dataset to train on')
+    parser.add_argument('--grid_root', default='./GRID_processed/', help='root of preprocessed GRID data (from scripts/preprocess_grid.py)')
     return parser.parse_args()
 
 
@@ -40,11 +42,15 @@ def init_seeds(seed=0, cuda_deterministic=True):
         torch.backends.cudnn.benchmark = True
 
 
-def dataset_factory(dataset_name):
+def dataset_factory(dataset_name, grid_root="./GRID_processed/"):
     if dataset_name == "LRS2":
         from data.LRS2_dataset import LRS2Dataset, collate_fn
         train_dataset = LRS2Dataset("train")
         unseen_dataset = LRS2Dataset("test")
+    elif dataset_name == "GRID":
+        from data.grid_dataset import GRIDDataset, collate_fn
+        train_dataset = GRIDDataset("train", root=grid_root)
+        unseen_dataset = GRIDDataset("test", root=grid_root)
     else:
         raise Exception("Wrong dataset_name")
     return train_dataset, unseen_dataset, collate_fn
@@ -59,14 +65,15 @@ def main():
         os.makedirs(save_dir)
     logger = get_one_logger(save_dir)
     init_seeds(1, cuda_deterministic=False)
-    num_class = 51+2+2  # 包括padding和SIL, bos和eos
-    model = PhonemeSplitDecoderNet(num_class=num_class)
-    logger.info("Num of class: " + str(num_class))
-    model.cuda()
     loss_fn = nn.CrossEntropyLoss(ignore_index=0)
     ph_loss_fn = nn.CrossEntropyLoss(ignore_index=0)
-    dataset = "LRS2"
-    train_dataset, unseen_dataset, collate_fn = dataset_factory(dataset)
+    train_dataset, unseen_dataset, collate_fn = dataset_factory(args.dataset, args.grid_root)
+    if args.dataset == "LRS2":
+        num_class = 51+2+2  # 包括padding和SIL, bos和eos
+    else:
+        # GRID: vocabulary is built from the data (PAD + SIL + words + BOS + EOS)
+        num_class = train_dataset.num_class
+    model = PhonemeSplitDecoderNet(num_class=num_class)
     logger.info("{} train data size: {}".format(dataset, len(train_dataset)))
     logger.info("{} test data size: {}".format(dataset, len(unseen_dataset)))
 

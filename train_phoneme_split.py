@@ -75,6 +75,7 @@ def main():
         # GRID: vocabulary is built from the data (PAD + SIL + words + BOS + EOS)
         num_class = train_dataset.num_class
     model = PhonemeSplitDecoderNet(num_class=num_class)
+    model.cuda()
     logger.info("{} train data size: {}".format(args.dataset, len(train_dataset)))
     logger.info("{} test data size: {}".format(args.dataset, len(unseen_dataset)))
 

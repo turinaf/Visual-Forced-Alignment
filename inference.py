@@ -136,8 +136,10 @@ def main():
         if len(gt_spans) == len(pred_spans):
             errs = [abs(p_start - g_start) for (_, p_start), (_, g_start) in zip(pred_spans, gt_spans)]
             acc = sum(1 for a, b in zip(frame_to_label, gt_frame_label) if a == b) / len(gt_frame_label)
+            mean_err, median_err = np.mean(errs), np.median(errs)
             print(f"\nground-truth comparison: frame acc {acc:.4f}, "
-                  f"boundary error mean {np.mean(errs):.2f} / median {np.median(errs):.1f} frames")
+                  f"boundary MAE mean {mean_err:.2f} frames ({mean_err * 1000 / FPS:.0f} ms), "
+                  f"median {median_err:.1f} frames ({median_err * 1000 / FPS:.0f} ms)")
         else:
             print(f"\nground-truth comparison skipped: {len(pred_spans)} predicted spans "
                   f"vs {len(gt_spans)} ground-truth spans")

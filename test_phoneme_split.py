@@ -10,6 +10,8 @@ from models.phoneme_split_net import PhonemeSplitDecoderNet
 from scripts.viterbi_align import viterbi_align
 from train_phoneme_split import calc_cer, dataset_factory, get_boundary_label
 
+FPS = 25
+
 
 def arg_parse():
     parser = argparse.ArgumentParser()
@@ -127,8 +129,9 @@ def evaluate(model, dataloader, dataset, num_align, use_bound_pred, print_sample
     if align_acc_list:
         print(f"alignment frame acc: {np.mean(align_acc_list):.4f}")
     if boundary_err_list:
-        print(f"boundary error (frames): mean {np.mean(boundary_err_list):.2f}, "
-              f"median {np.median(boundary_err_list):.1f}")
+        mean_err, median_err = np.mean(boundary_err_list), np.median(boundary_err_list)
+        print(f"boundary MAE: mean {mean_err:.2f} frames ({mean_err * 1000 / FPS:.0f} ms), "
+              f"median {median_err:.1f} frames ({median_err * 1000 / FPS:.0f} ms)")
 
 
 def main():
